@@ -42,6 +42,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PlanController;
 
 Route::get('/', function () {
     return auth()->check()
@@ -162,6 +163,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::post('invitations', [InvitationController::class, 'store'])->name('admin.invitations.store');
     Route::post('users/{user}/resend-invitation', [InvitationController::class, 'resend'])->name('admin.invitations.resend');
     Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('admin.invitations.destroy');
+
+    //プラン管理
+    Route::get('plans', [PlanController::class, 'index'])->name('admin.plans.index');
+    Route::get('plans/create', [PlanController::class, 'create'])->name('admin.plans.create');
+    Route::post('plans', [PlanController::class, 'store'])->name('admin.plans.store');
+    Route::get('plans/{plan}', [PlanController::class, 'show'])->name('admin.plans.show');
 
     // 資格マスタ管理(資格本体の CRUD + 状態遷移、admin のみ)
     Route::resource('certifications', CertificationController::class)
