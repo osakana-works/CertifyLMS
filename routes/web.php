@@ -42,6 +42,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Settings\SettingsProfileController;
 
 Route::get('/', function () {
     return auth()->check()
@@ -73,6 +74,13 @@ Route::middleware('auth')->group(function () {
     Route::get('enrollments/{enrollment}', [EnrollmentController::class, 'show'])
         ->withTrashed()
         ->name('enrollments.show');
+
+    // 設定・プロフィール(全ロール共通、修了済でも利用可のため active-learning は付けない)
+    Route::get('settings/profile', [SettingsProfileController::class, 'edit'])->name('settings.profile.edit');
+    Route::patch('settings/profile', [SettingsProfileController::class, 'update'])->name('settings.profile.update');
+    Route::post('settings/avatar', [SettingsProfileController::class, 'storeAvatar'])->name('settings.avatar.store');
+    Route::delete('settings/avatar', [SettingsProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
+    Route::put('settings/password', [SettingsProfileController::class, 'updatePassword'])->name('settings.password.update');
 });
 
 // ============================================================
