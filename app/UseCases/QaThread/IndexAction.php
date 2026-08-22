@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\QaThread;
 
+use App\Enums\CertificationStatus;
 use App\Enums\QaThreadStatus;
 use App\Enums\UserRole;
 use App\Models\QaThread;
@@ -23,6 +24,8 @@ final class IndexAction
 
         if ($viewer->role !== UserRole::Admin) {
             $query->whereHas('certification', fn ($q) => $q->published());
+        } else {
+            $query->whereHas('certification', fn ($q) => $q->where('status', '!=', CertificationStatus::Draft->value));
         }
 
         if ($keyword !== null && $keyword !== '') {

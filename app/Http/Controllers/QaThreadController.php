@@ -51,8 +51,8 @@ final class QaThreadController extends Controller
 
         $filters = $request->only(['status', 'certification_id', 'keyword']);
 
-        $certifications = $viewer->role === UserRole::Admin
-            ? Certification::orderBy('name')->get()
+       $certifications = $viewer->role === UserRole::Admin
+            ? Certification::where('status', '!=', CertificationStatus::Draft->value)->orderBy('name')->get()
             : Certification::published()->orderBy('name')->get();
 
         $publishedStatus = CertificationStatus::Published;
@@ -75,7 +75,7 @@ final class QaThreadController extends Controller
 
         return redirect()
             ->route('qa-board.show', $thread)
-            ->with('success', 'スレッドを投稿しました。');
+            ->with('success', '質問を投稿しました。');
     }
 
     public function show(QaThread $thread): View
@@ -98,7 +98,7 @@ final class QaThreadController extends Controller
 
         return redirect()
             ->route('qa-board.show', $thread)
-            ->with('success', 'スレッドを更新しました。');
+            ->with('success', '質問を更新しました。');
     }
 
     public function destroy(QaThread $thread, DestroyAction $action): RedirectResponse
@@ -111,7 +111,7 @@ final class QaThreadController extends Controller
 
         return redirect()
             ->route($isAdminContext ? 'admin.qa-board.index' : 'qa-board.index')
-            ->with('success', 'スレッドを削除しました。');
+            ->with('success', '質問を削除しました。');
     }
 
     public function resolve(QaThread $thread, ResolveAction $action): RedirectResponse
@@ -122,7 +122,7 @@ final class QaThreadController extends Controller
 
         return redirect()
             ->route('qa-board.show', $thread)
-            ->with('success', 'スレッドを解決済みにしました。');
+            ->with('success', '質問を解決済みにしました。');
     }
 
     public function unresolve(QaThread $thread, UnresolveAction $action): RedirectResponse
@@ -133,7 +133,7 @@ final class QaThreadController extends Controller
 
         return redirect()
             ->route('qa-board.show', $thread)
-            ->with('success', 'スレッドを未解決に戻しました。');
+            ->with('success', '質問を未解決に戻しました。');
     }
 
     public function storeReply(QaThread $thread, StoreReplyRequest $request, StoreReplyAction $action): RedirectResponse
@@ -157,7 +157,7 @@ final class QaThreadController extends Controller
         $action($reply, $request->validated());
 
         return redirect()
-            ->route('qa-board.show', $reply->qa_thread_id)
+            ->route('qa-board.show', $reply->qa_thread_id) 
             ->with('success', '回答を更新しました。');
     }
 
