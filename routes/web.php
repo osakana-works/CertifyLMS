@@ -42,6 +42,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\QaThreadController;
 
 Route::get('/', function () {
     return auth()->check()
@@ -192,6 +193,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
         ->name('admin.enrollments.updateExamDate');
     Route::post('enrollments/{enrollment}/fail', [EnrollmentManagementController::class, 'fail'])
         ->name('admin.enrollments.fail');
+
+    // 質問掲示板モデレーション(URLはadmin専用、処理は受講生・コーチ側と同じメソッドを共有)
+    Route::get('qa-board', [QaThreadController::class, 'index'])->name('admin.qa-board.index');
+    Route::get('qa-board/{thread}', [QaThreadController::class, 'show'])->name('admin.qa-board.show');
+    Route::delete('qa-board/{thread}', [QaThreadController::class, 'destroy'])->name('admin.qa-board.destroy');
+    Route::delete('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'destroyReply'])->name('admin.qa-board.replies.destroy');
 });
 
 // ============================================================
@@ -414,6 +421,28 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
         ->name('chat.show');
     Route::post('chat-rooms/{room}/messages', [ChatRoomController::class, 'storeMessage'])
         ->name('chat.storeMessage');
+});
+
+// ============================================================
+// 受講生・コーチ共有 — 質問掲示板(閲覧は受講生・コーチ、投稿はロール別に絞る)
+// ============================================================
+// ============================================================
+// 受講生・コーチ共有 — 質問掲示板(閲覧は受講生・コーチ、投稿はロール別に絞る)
+// ============================================================
+Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(function () {
+    Route::get('qa-board', [QaThreadController::class, 'index'])->name('qa-board.index');
+    Route::get('qa-board/create', [QaThreadController::class, 'create'])->name('qa-board.create');
+    Route::post('qa-board', [QaThreadController::class, 'store'])->name('qa-board.store');
+    Route::get('qa-board/{thread}', [QaThreadController::class, 'show'])->name('qa-board.show');
+    Route::get('qa-board/{thread}/edit', [QaThreadController::class, 'edit'])->name('qa-board.edit');
+    Route::patch('qa-board/{thread}', [QaThreadController::class, 'update'])->name('qa-board.update');
+    Route::delete('qa-board/{thread}', [QaThreadController::class, 'destroy'])->name('qa-board.destroy');
+    Route::post('qa-board/{thread}/resolve', [QaThreadController::class, 'resolve'])->name('qa-board.resolve');
+    Route::post('qa-board/{thread}/unresolve', [QaThreadController::class, 'unresolve'])->name('qa-board.unresolve');
+    Route::post('qa-board/{thread}/replies', [QaThreadController::class, 'storeReply'])->name('qa-board.replies.store');
+    Route::get('qa-board/{thread}/replies/{reply}/edit', [QaThreadController::class, 'editReply'])->name('qa-board.replies.edit');
+    Route::patch('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'updateReply'])->name('qa-board.replies.update');
+    Route::delete('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'destroyReply'])->name('qa-board.replies.destroy');
 });
 
 // ============================================================
