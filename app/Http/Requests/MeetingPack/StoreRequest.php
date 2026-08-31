@@ -29,11 +29,11 @@ final class StoreRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name' => 'SKU名',
+            'name' => 'パック名',
             'description' => '説明',
             'meeting_count' => '面談回数',
             'price' => '価格',
-            'stripe_price_id' => 'Stripe Price ID',
+            'stripe_price_id' => 'Stripe価格',
             'sort_order' => '並び順',
         ];
     }
