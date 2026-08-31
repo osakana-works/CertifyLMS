@@ -40,7 +40,7 @@ class MeetingPackController extends Controller
         return view('meeting-pack.management.index', [
             'plans' => $plans,
             'keyword' => $keyword,
-            'status' => $statusValue,  // ← Viewには、文字列のまま渡す
+            'status' => $statusValue,  
         ]);
     }
 
