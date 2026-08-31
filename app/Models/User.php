@@ -310,4 +310,12 @@ class User extends Authenticatable
     {
         return $query->whereIn('status', [UserStatus::InProgress, UserStatus::Graduated]);
     }
+
+    /**
+     * @return HasMany<QaThread, $this>
+     */
+    public function qaThreads(): HasMany
+    {
+        return $this->hasMany(QaThread::class);
+    }
 }

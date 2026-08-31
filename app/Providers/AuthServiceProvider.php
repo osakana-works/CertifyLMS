@@ -56,6 +56,10 @@ use App\Policies\SectionQuizPolicy;
 use App\Policies\SectionViewPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\WeakDrillPolicy;
+use App\Models\QaReply;
+use App\Models\QaThread;
+use App\Policies\QaReplyPolicy;
+use App\Policies\QaThreadPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -90,6 +94,8 @@ class AuthServiceProvider extends ServiceProvider
         Meeting::class => MeetingPolicy::class,
         CoachAvailability::class => CoachAvailabilityPolicy::class,
         MeetingPack::class => MeetingPackPolicy::class,
+        QaReply::class => QaReplyPolicy::class,
+        QaThread::class => QaThreadPolicy::class,
     ];
 
     /**
