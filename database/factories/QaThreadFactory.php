@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Factories;
+
+use App\Enums\QaThreadStatus;
+use App\Models\Certification;
+use App\Models\QaThread;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<QaThread>
+ */
+class QaThreadFactory extends Factory
+{
+    protected $model = QaThread::class;
+
+    public function definition(): array
+    {
+        return [
+            'certification_id' => Certification::factory()->published(),
+            'user_id' => User::factory()->student(),
+            'title' => fake()->sentence(6),
+            'body' => fake()->paragraph(),
+            'status' => QaThreadStatus::Unresolved->value,
+            'resolved_at' => null,
+        ];
+    }
+
+    public function resolved(): static
+    {
+        return $this->state(fn () => [
+            'status' => QaThreadStatus::Resolved->value,
+            'resolved_at' => now(),
+        ]);
+    }
+
+    public function forCertification(Certification $certification): static
+    {
+        return $this->state(fn () => ['certification_id' => $certification->id]);
+    }
+
+    public function forUser(User $user): static
+    {
+        return $this->state(fn () => ['user_id' => $user->id]);
+    }
+}
