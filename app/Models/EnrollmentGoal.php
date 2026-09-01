@@ -53,4 +53,9 @@ class EnrollmentGoal extends Model
     {
         return $query->orderBy('achieved_at')->orderByDesc('target_date');
     }
+
+    public function isAchieved(): bool
+    {
+        return $this->achieved_at !== null;
+    }
 }

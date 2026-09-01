@@ -17,6 +17,7 @@ use App\Http\Controllers\EnrollmentManagementController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LearningHourTargetController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MeetingPackController;
 use App\Http\Controllers\MeetingQuotaHistoryController;
 use App\Http\Controllers\MockExamAnswerController;
 use App\Http\Controllers\MockExamCatalogController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\MockExamQuestionController;
 use App\Http\Controllers\MockExamSessionController;
 use App\Http\Controllers\MockExamSessionMonitorController;
 use App\Http\Controllers\PartController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\QuestionCategoryController;
 use App\Http\Controllers\QuizHistoryController;
 use App\Http\Controllers\QuizStatsController;
@@ -43,6 +45,8 @@ use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EnrollmentGoalController;
+use App\Http\Controllers\QaThreadController;
+
 
 Route::get('/', function () {
     return auth()->check()
@@ -173,10 +177,34 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::post('users/{user}/extend-course', [UserController::class, 'extendCourse'])->name('admin.users.extendCourse');
     Route::post('users/{user}/grant-meeting-quota', [UserController::class, 'grantMeetingQuota'])->name('admin.users.grantMeetingQuota');
 
+    // 面談パック
+    Route::get('meeting-packs', [MeetingPackController::class, 'index'])->name('admin.meeting-packs.index');
+    Route::get('meeting-packs/create', [MeetingPackController::class, 'create'])->name('admin.meeting-packs.create');
+    Route::post('meeting-packs', [MeetingPackController::class, 'store'])->name('admin.meeting-packs.store');
+    Route::get('meeting-packs/{plan}', [MeetingPackController::class, 'show'])->name('admin.meeting-packs.show');
+    Route::patch('meeting-packs/{plan}', [MeetingPackController::class, 'update'])->name('admin.meeting-packs.update');
+    Route::delete('meeting-packs/{plan}', [MeetingPackController::class, 'destroy'])->name('admin.meeting-packs.destroy');
+    Route::get('meeting-packs/{plan}/edit', [MeetingPackController::class, 'edit'])->name('admin.meeting-packs.edit');
+    Route::post('meeting-packs/{plan}/publish', [MeetingPackController::class, 'publish'])->name('admin.meeting-packs.publish');
+    Route::post('meeting-packs/{plan}/archive', [MeetingPackController::class, 'archive'])->name('admin.meeting-packs.archive');
+    Route::post('meeting-packs/{plan}/unarchive', [MeetingPackController::class, 'unarchive'])->name('admin.meeting-packs.unarchive');
+
     // 招待管理
     Route::post('invitations', [InvitationController::class, 'store'])->name('admin.invitations.store');
     Route::post('users/{user}/resend-invitation', [InvitationController::class, 'resend'])->name('admin.invitations.resend');
     Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('admin.invitations.destroy');
+
+    // プラン管理
+    Route::get('plans', [PlanController::class, 'index'])->name('admin.plans.index');
+    Route::get('plans/create', [PlanController::class, 'create'])->name('admin.plans.create');
+    Route::post('plans', [PlanController::class, 'store'])->name('admin.plans.store');
+    Route::get('plans/{plan}', [PlanController::class, 'show'])->name('admin.plans.show');
+    Route::put('plans/{plan}', [PlanController::class, 'update'])->name('admin.plans.update');
+    Route::delete('plans/{plan}', [PlanController::class, 'destroy'])->name('admin.plans.destroy');
+    Route::get('plans/{plan}/edit', [PlanController::class, 'edit'])->name('admin.plans.edit');
+    Route::post('plans/{plan}/publish', [PlanController::class, 'publish'])->name('admin.plans.publish');
+    Route::post('plans/{plan}/archive', [PlanController::class, 'archive'])->name('admin.plans.archive');
+    Route::post('plans/{plan}/unarchive', [PlanController::class, 'unarchive'])->name('admin.plans.unarchive');
 
     // 資格マスタ管理(資格本体の CRUD + 状態遷移、admin のみ)
     Route::resource('certifications', CertificationController::class)
@@ -207,6 +235,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
         ->name('admin.enrollments.updateExamDate');
     Route::post('enrollments/{enrollment}/fail', [EnrollmentManagementController::class, 'fail'])
         ->name('admin.enrollments.fail');
+
+    // 質問掲示板モデレーション(URLはadmin専用、処理は受講生・コーチ側と同じメソッドを共有)
+    Route::get('qa-board', [QaThreadController::class, 'index'])->name('admin.qa-board.index');
+    Route::get('qa-board/{thread}', [QaThreadController::class, 'show'])->name('admin.qa-board.show');
+    Route::delete('qa-board/{thread}', [QaThreadController::class, 'destroy'])->name('admin.qa-board.destroy');
+    Route::delete('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'destroyReply'])->name('admin.qa-board.replies.destroy');
 });
 
 // ============================================================
@@ -429,6 +463,26 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
         ->name('chat.show');
     Route::post('chat-rooms/{room}/messages', [ChatRoomController::class, 'storeMessage'])
         ->name('chat.storeMessage');
+});
+
+
+// ============================================================
+// 受講生・コーチ共有 — 質問掲示板(閲覧は受講生・コーチ、投稿はロール別に絞る)
+// ============================================================
+Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(function () {
+    Route::get('qa-board', [QaThreadController::class, 'index'])->name('qa-board.index');
+    Route::get('qa-board/create', [QaThreadController::class, 'create'])->name('qa-board.create');
+    Route::post('qa-board', [QaThreadController::class, 'store'])->name('qa-board.store');
+    Route::get('qa-board/{thread}', [QaThreadController::class, 'show'])->name('qa-board.show');
+    Route::get('qa-board/{thread}/edit', [QaThreadController::class, 'edit'])->name('qa-board.edit');
+    Route::patch('qa-board/{thread}', [QaThreadController::class, 'update'])->name('qa-board.update');
+    Route::delete('qa-board/{thread}', [QaThreadController::class, 'destroy'])->name('qa-board.destroy');
+    Route::post('qa-board/{thread}/resolve', [QaThreadController::class, 'resolve'])->name('qa-board.resolve');
+    Route::post('qa-board/{thread}/unresolve', [QaThreadController::class, 'unresolve'])->name('qa-board.unresolve');
+    Route::post('qa-board/{thread}/replies', [QaThreadController::class, 'storeReply'])->name('qa-board.replies.store');
+    Route::get('qa-board/{thread}/replies/{reply}/edit', [QaThreadController::class, 'editReply'])->name('qa-board.replies.edit');
+    Route::patch('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'updateReply'])->name('qa-board.replies.update');
+    Route::delete('qa-board/{thread}/replies/{reply}', [QaThreadController::class, 'destroyReply'])->name('qa-board.replies.destroy');
 });
 
 // ============================================================
