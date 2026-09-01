@@ -94,4 +94,22 @@ class StoreTest extends TestCase
             ])
             ->assertSessionHasErrors('target_date');
     }
+
+    public function test_target_date_can_be_in_the_past(): void
+    {
+        $student = User::factory()->student()->create();
+        $enrollment = Enrollment::factory()->create(['user_id' => $student->id]);
+
+        $this->actingAs($student)
+            ->post(route('enrollments.goals.store', $enrollment), [
+                'title' => 'テスト目標',
+                'target_date' => now()->subMonth()->format('Y-m-d'),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('enrollment_goals', [
+            'enrollment_id' => $enrollment->id,
+            'title' => 'テスト目標',
+        ]);
+    }
 }

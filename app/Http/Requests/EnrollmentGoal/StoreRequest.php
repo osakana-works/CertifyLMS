@@ -30,7 +30,7 @@ final class StoreRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'title' => '目標',
+            'title' => '目標タイトル',
             'target_date' => '目標期日',
             'description' => '詳細',
         ];
