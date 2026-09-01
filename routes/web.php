@@ -44,7 +44,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EnrollmentGoalController;
 use App\Http\Controllers\QaThreadController;
+
 
 Route::get('/', function () {
     return auth()->check()
@@ -97,6 +99,20 @@ Route::middleware(['auth', 'role:student', 'active-learning'])->group(function (
     Route::delete('enrollments/{enrollment}', [EnrollmentController::class, 'destroy'])->name('enrollments.destroy');
     Route::post('enrollments/{enrollment}/resume', [EnrollmentController::class, 'resume'])->name('enrollments.resume');
     Route::patch('enrollments/{enrollment}/exam-date', [EnrollmentController::class, 'updateExamDate'])->name('enrollments.updateExamDate');
+
+    // 個人目標(受講生本人のみ CRUD、閲覧はコーチ/管理者にも開く。閲覧側は enrollments.show 経由で Policy 制御)
+    Route::post('enrollments/{enrollment}/goals', [EnrollmentGoalController::class, 'store'])
+        ->name('enrollments.goals.store');
+    Route::get('enrollment-goals/{goal}/edit', [EnrollmentGoalController::class, 'edit'])
+        ->name('enrollment-goals.edit');
+    Route::patch('enrollment-goals/{goal}', [EnrollmentGoalController::class, 'update'])
+        ->name('enrollment-goals.update');
+    Route::delete('enrollment-goals/{goal}', [EnrollmentGoalController::class, 'destroy'])
+        ->name('enrollment-goals.destroy');
+    Route::post('enrollment-goals/{goal}/achieve', [EnrollmentGoalController::class, 'markAchieved'])
+        ->name('enrollment-goals.markAchieved');
+    Route::delete('enrollment-goals/{goal}/achieve', [EnrollmentGoalController::class, 'unmarkAchieved'])
+        ->name('enrollment-goals.unmarkAchieved');
 
     // 修了証受領(受講生自己発火、graduated は active-learning でブロックされるため新規受領不可)
     Route::post('enrollments/{enrollment}/receive-certificate', [ReceiveCertificateController::class, 'store'])
@@ -449,9 +465,7 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
         ->name('chat.storeMessage');
 });
 
-// ============================================================
-// 受講生・コーチ共有 — 質問掲示板(閲覧は受講生・コーチ、投稿はロール別に絞る)
-// ============================================================
+
 // ============================================================
 // 受講生・コーチ共有 — 質問掲示板(閲覧は受講生・コーチ、投稿はロール別に絞る)
 // ============================================================
