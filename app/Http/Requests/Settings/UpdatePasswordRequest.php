@@ -30,8 +30,8 @@ final class UpdatePasswordRequest extends FormRequest
     {
         return [
             'current_password' => '現在のパスワード',
-            'password' => '新しいパスワード',
-            'password_confirmation' => '新しいパスワード(確認)',
+            'password' => 'パスワード',
+            'password_confirmation' => 'パスワード(確認)',
         ];
     }
 }

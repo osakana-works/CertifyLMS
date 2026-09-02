@@ -83,6 +83,7 @@ class UserSeeder extends Seeder
                 'profile_setup_completed' => true,
                 'email_verified_at' => $now,
                 'meeting_url' => 'https://meet.google.com/coach-hanako-room',
+                'avatar_url' => 'https://ui-avatars.com/api/?name=Coach+Hanako',
             ])
             ->create();
 

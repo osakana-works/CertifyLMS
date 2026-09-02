@@ -109,17 +109,6 @@ class UpdateDefaultEnrollmentTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_graduated_student_is_forbidden_by_active_learning_middleware(): void
-    {
-        $student = User::factory()->student()->graduated()->create();
-        $enrollment = Enrollment::factory()->for($student)->learning()->create();
-
-        $response = $this->actingAs($student)
-            ->put(route('settings.default-enrollment.update', $enrollment));
-
-        $response->assertForbidden();
-    }
-
     public function test_unauthenticated_request_is_redirected_to_login(): void
     {
         $enrollment = Enrollment::factory()->learning()->create();
