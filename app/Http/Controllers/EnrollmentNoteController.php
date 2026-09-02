@@ -4,18 +4,56 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EnrollmentNote\StoreRequest;
+use App\Http\Requests\EnrollmentNote\UpdateRequest;
+use App\Models\Enrollment;
 use App\Models\EnrollmentNote;
+use App\UseCases\EnrollmentNote\DestroyAction;
+use App\UseCases\EnrollmentNote\StoreAction;
+use App\UseCases\EnrollmentNote\UpdateAction;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 /**
- * 受講登録(Enrollment)配下のコーチメモ。まずは画面確認用の最小構成。
- *
- * ヒアリング回答後、StoreRequest / StoreAction 等を追加して本実装する。
+ * 受講登録(Enrollment)配下のコーチメモ。追加・編集・削除を扱う(コーチ・管理者のみ)。
  */
 final class EnrollmentNoteController extends Controller
 {
+    public function store(Enrollment $enrollment, StoreRequest $request, StoreAction $action): RedirectResponse
+    {
+        $action($enrollment, $request->user(), $request->validated());
+
+        return redirect()
+            ->route('enrollments.show', $enrollment)
+            ->with('success', 'メモを追加しました。');
+    }
+
     public function edit(EnrollmentNote $note): View
     {
+        $this->authorize('update', $note);
+
         return view('enrollment-note.edit', compact('note'));
+    }
+
+    public function update(EnrollmentNote $note, UpdateRequest $request, UpdateAction $action): RedirectResponse
+    {
+        $action($note, $request->validated());
+
+        return redirect()
+            ->route('enrollments.show', $note->enrollment_id)
+            ->with('success', 'メモを更新しました。');
+    }
+
+    public function destroy(EnrollmentNote $note, DestroyAction $action): RedirectResponse
+    {
+        $this->authorize('delete', $note);
+
+        $enrollmentId = $note->enrollment_id;
+
+        $action($note);
+
+        return redirect()
+            ->route('enrollments.show', $enrollmentId)
+            ->with('success', 'メモを削除しました。');
     }
 }
