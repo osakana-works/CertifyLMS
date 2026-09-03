@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Chapter;
 use App\Models\SectionProgress;
 use App\Models\User;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * /learning/chapters/{chapter} (4 階層目、Section 一覧) のデータを準備する Action。
  *
- * cascade visibility (Chapter / 親 Part のいずれかが Draft / SoftDelete) で 404、
- * 公開済 Section 一覧と受講生の読了済 Section ID 配列を併せて返す (Section 行の読了バッジ用)。
+ * cascade visibility (Chapter / 親 Part / 親 Certification のいずれかが非公開) で 404、
+ * 受講生の受講登録の有無を確認(未登録なら 403)、公開済 Section 一覧と受講生の読了済
+ * Section ID 配列を併せて返す (Section 行の読了バッジ用)。
  */
 final class ShowChapterAction
 {
@@ -27,8 +30,17 @@ final class ShowChapterAction
 
         if ($chapter->status !== ContentStatus::Published
             || $chapter->part === null
-            || $chapter->part->status !== ContentStatus::Published) {
+            || $chapter->part->status !== ContentStatus::Published
+            || $chapter->part->certification->status !== CertificationStatus::Published) {
             throw new NotFoundHttpException;
+        }
+
+        $enrollment = $student->enrollments()
+            ->where('certification_id', $chapter->part->certification_id)
+            ->first();
+
+        if ($enrollment === null) {
+            throw new AccessDeniedHttpException;
         }
 
         $sections = $chapter->sections()
@@ -36,12 +48,8 @@ final class ShowChapterAction
             ->ordered()
             ->get();
 
-        $enrollment = $student->enrollments()
-            ->where('certification_id', $chapter->part->certification_id)
-            ->first();
-
         $completedSectionIds = [];
-        if ($enrollment !== null && $sections->isNotEmpty()) {
+        if ($sections->isNotEmpty()) {
             $completedSectionIds = SectionProgress::query()
                 ->where('enrollment_id', $enrollment->id)
                 ->whereIn('section_id', $sections->pluck('id'))

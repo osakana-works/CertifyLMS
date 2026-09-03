@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Part;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * /learning/parts/{part} (3 階層目、Chapter 一覧) のデータを準備する Action。
  *
- * 公開済 Chapter 一覧 + Part の Published 確認 (非公開なら 404) に加え、
+ * 公開済 Chapter 一覧 + Part の Published 確認・親 Certification の Published 確認
+ * (非公開なら 404) に加え、受講生の受講登録の有無を確認(未登録なら 403)。
  * 各 Chapter の Section 総数 / 読了済 Section 数 を 1 ショット SQL で集計して Blade に渡す
- * (Chapter 完了バッジの表示用)。受講生が当該資格に未登録の場合は完了数 0 として扱う。
+ * (Chapter 完了バッジの表示用)。
  */
 final class ShowPartAction
 {
@@ -26,8 +29,17 @@ final class ShowPartAction
     {
         $part->loadMissing('certification');
 
-        if ($part->status !== ContentStatus::Published) {
+        if ($part->status !== ContentStatus::Published
+            || $part->certification->status !== CertificationStatus::Published) {
             throw new NotFoundHttpException;
+        }
+
+        $enrollment = $student->enrollments()
+            ->where('certification_id', $part->certification_id)
+            ->first();
+
+        if ($enrollment === null) {
+            throw new AccessDeniedHttpException;
         }
 
         $chapters = $part->chapters()
@@ -39,12 +51,8 @@ final class ShowPartAction
             ])
             ->get();
 
-        $enrollment = $student->enrollments()
-            ->where('certification_id', $part->certification_id)
-            ->first();
-
         $completedByChapter = [];
-        if ($enrollment !== null && $chapters->isNotEmpty()) {
+        if ($chapters->isNotEmpty()) {
             $rows = DB::table('sections')
                 ->join('section_progresses', function ($join) use ($enrollment) {
                     $join->on('section_progresses.section_id', '=', 'sections.id')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\CertificationStatus;
 use App\Enums\EnrollmentStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
@@ -115,6 +116,7 @@ class User extends Authenticatable
     {
         return $this->enrollments()
             ->whereIn('status', [EnrollmentStatus::Learning->value, EnrollmentStatus::Passed->value])
+            ->whereHas('certification', fn ($q) => $q->where('status', CertificationStatus::Published->value))
             ->with('certification')
             ->orderBy('created_at');
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\EnrollmentStatus;
 use App\Models\Enrollment;
 use App\Models\User;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Collection;
  *
  * 通常は ResolveDefaultEnrollment Middleware が 2 階層目へ redirect するため本 Action は呼ばれず、
  * default NULL かつ Enrollment 2+ 件 / 0 件 のフォールバック分岐でのみ Blade に渡るデータを返す。
+ * 紐づく Certification が Published 状態のもののみを対象とする。
  *
  * @return array{
  *     enrollments: Collection<int, Enrollment>,
@@ -33,6 +35,7 @@ final class IndexAction
                 EnrollmentStatus::Learning->value,
                 EnrollmentStatus::Passed->value,
             ])
+            ->whereHas('certification', fn ($q) => $q->where('status', CertificationStatus::Published->value))
             ->with(['certification.category'])
             ->orderBy('current_term')
             ->get();
