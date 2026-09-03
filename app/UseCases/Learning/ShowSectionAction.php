@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Section;
 use App\Models\SectionProgress;
 use App\Models\User;
 use App\Services\MarkdownRenderingService;
 use App\Services\SectionQuestionScoreService;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * /learning/sections/{section} (5 階層目、Section 詳細) のデータを準備する Action。
  *
- * cascade visibility (Section / Chapter / Part のいずれかが Draft or SoftDelete 済) を 404 で弾き、
- * Markdown 本文を MarkdownRenderingService::toHtml で HTML 化し、読了状態と前後 Section を併せて返す。
+ * cascade visibility (Section / Chapter / Part / Certification のいずれかが非公開) を
+ * 404 で弾き、受講生の受講登録の有無を確認(未登録なら 403)。Markdown 本文を
+ * MarkdownRenderingService::toHtml で HTML 化し、読了状態と前後 Section を併せて返す。
  */
 final class ShowSectionAction
 {
@@ -36,8 +39,17 @@ final class ShowSectionAction
 
         if ($section->status !== ContentStatus::Published
             || $chapter === null || $chapter->status !== ContentStatus::Published
-            || $part === null || $part->status !== ContentStatus::Published) {
+            || $part === null || $part->status !== ContentStatus::Published
+            || $part->certification->status !== CertificationStatus::Published) {
             throw new NotFoundHttpException;
+        }
+
+        $enrollment = $student->enrollments()
+            ->where('certification_id', $part->certification_id)
+            ->first();
+
+        if ($enrollment === null) {
+            throw new AccessDeniedHttpException;
         }
 
         $siblingSections = $chapter->sections()
@@ -53,17 +65,10 @@ final class ShowSectionAction
             ? $siblingSections->get($currentIndex + 1)
             : null;
 
-        $enrollment = $student->enrollments()
-            ->where('certification_id', $part->certification_id)
-            ->first();
-
-        $completed = false;
-        if ($enrollment !== null) {
-            $completed = SectionProgress::query()
-                ->where('enrollment_id', $enrollment->id)
-                ->where('section_id', $section->id)
-                ->exists();
-        }
+        $completed = SectionProgress::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->where('section_id', $section->id)
+            ->exists();
 
         $hasSectionQuestions = $section->questions()->exists();
         $sectionQuizSummary = $hasSectionQuestions
