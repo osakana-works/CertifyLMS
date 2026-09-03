@@ -89,6 +89,11 @@ final class OnboardAction
                 'オンボーディング完了',
             );
 
+            $invitation->update([
+                'status' => InvitationStatus::Accepted,
+                'accepted_at' => $now,
+            ]);
+
             $user->forceFill($attrs)->save();
 
             // 面談クォータは受講生固有の消費対象。コーチは面談を提供する側のため初期付与しない。
