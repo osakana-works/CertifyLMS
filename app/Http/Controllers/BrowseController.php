@@ -8,6 +8,9 @@ use App\Models\Chapter;
 use App\Models\Enrollment;
 use App\Models\Part;
 use App\Models\Section;
+use App\Policies\LearningChapterPolicy;
+use App\Policies\LearningPartPolicy;
+use App\Policies\LearningSectionPolicy;
 use App\UseCases\Learning\IndexAction;
 use App\UseCases\Learning\ShowChapterAction;
 use App\UseCases\Learning\ShowEnrollmentAction;
@@ -40,18 +43,30 @@ class BrowseController extends Controller
         return view('learning.enrollments.show', $action($enrollment, $tab));
     }
 
-    public function showPart(Part $part, ShowPartAction $action): View
+    public function showPart(Part $part, ShowPartAction $action, LearningPartPolicy $policy): View
     {
+        if (! $policy->view(auth()->user(), $part)) {
+            abort(403);
+        }
+
         return view('learning.parts.show', $action($part, auth()->user()));
     }
 
-    public function showChapter(Chapter $chapter, ShowChapterAction $action): View
+    public function showChapter(Chapter $chapter, ShowChapterAction $action, LearningChapterPolicy $policy): View
     {
+        if (! $policy->view(auth()->user(), $chapter)) {
+            abort(403);
+        }
+
         return view('learning.chapters.show', $action($chapter, auth()->user()));
     }
 
-    public function showSection(Section $section, ShowSectionAction $action): View
+    public function showSection(Section $section, ShowSectionAction $action, LearningSectionPolicy $policy): View
     {
+        if (! $policy->view(auth()->user(), $section)) {
+            abort(403);
+        }
+
         return view('learning.sections.show', $action($section, auth()->user()));
     }
 }
