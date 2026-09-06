@@ -11,15 +11,16 @@ use App\Services\InvitationTokenService;
 use App\UseCases\Auth\OnboardAction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class OnboardingController extends Controller
 {
-    public function show(Request $request, Invitation $invitation, InvitationTokenService $tokenService): View
+    public function show(Request $request, Invitation $invitation, InvitationTokenService $tokenService): View|Response
     {
         if (! $tokenService->verify($request, $invitation)) {
-            return view('auth.invitation-invalid');
+            return response()->view('auth.invitation-invalid', [], 410);
         }
 
         $postUrl = URL::temporarySignedRoute(
