@@ -10,6 +10,7 @@ use App\Enums\QaThreadStatus;
 use App\Http\Controllers\DashboardController;
 use App\Models\ChatRoom;
 use App\Models\Enrollment;
+use App\Models\LearningSession;
 use App\Models\Meeting;
 use App\Models\QaThread;
 use App\Models\User;
@@ -44,10 +45,17 @@ final class FetchCoachDashboardAction
         $assignedEnrollments = Enrollment::query()
             ->whereIn('certification_id', $coachingCertificationIds)
             ->whereIn('status', [EnrollmentStatus::Learning, EnrollmentStatus::Passed])
+            ->with(['user', 'certification'])
             ->get();
 
+        $lastActivityByEnrollmentId = LearningSession::query()
+            ->whereIn('enrollment_id', $assignedEnrollments->pluck('id'))
+            ->groupBy('enrollment_id')
+            ->selectRaw('enrollment_id, MAX(started_at) as last_activity_at')
+            ->pluck('last_activity_at', 'enrollment_id');
+
         foreach ($assignedEnrollments as $enrollment) {
-            $enrollment->last_activity_at = $enrollment->learningSessions()->max('started_at');
+            $enrollment->last_activity_at = $lastActivityByEnrollmentId->get($enrollment->id);
         }
 
         $todayAndTomorrowMeetings = Meeting::query()
