@@ -6,7 +6,10 @@ namespace Tests\Feature\Http\QaThread;
 
 use App\Models\Certification;
 use App\Models\User;
+use App\Notifications\QaThread\QaThreadCreatedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StoreTest extends TestCase
@@ -31,6 +34,32 @@ class StoreTest extends TestCase
             'user_id' => $student->id,
             'title' => 'テストの質問タイトル',
         ]);
+    }
+
+    public function test_notifies_assigned_coaches(): void
+    {
+        Notification::fake();
+
+        $student = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+        $unassignedCoach = User::factory()->coach()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $certification->coaches()->attach($coach->id, [
+            'id' => (string) Str::ulid(),
+            'assigned_by_user_id' => $student->id,
+            'assigned_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($student)->post(route('qa-board.store'), [
+            'certification_id' => $certification->id,
+            'title' => 'テストの質問タイトル',
+            'body' => 'テストの質問本文です。',
+        ]);
+
+        Notification::assertSentTo($coach, QaThreadCreatedNotification::class);
+        Notification::assertNotSentTo($unassignedCoach, QaThreadCreatedNotification::class);
     }
 
     public function test_title_is_required(): void

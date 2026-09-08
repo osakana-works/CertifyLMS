@@ -9,7 +9,9 @@ use App\Models\CertificationCoachAssignment;
 use App\Models\QaReply;
 use App\Models\QaThread;
 use App\Models\User;
+use App\Notifications\QaThread\QaReplyReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ReplyTest extends TestCase
@@ -58,6 +60,43 @@ class ReplyTest extends TestCase
             'qa_thread_id' => $thread->id,
             'user_id' => $coach->id,
         ]);
+    }
+
+    public function test_notifies_thread_author_but_not_self_reply(): void
+    {
+        Notification::fake();
+
+        $author = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $thread = QaThread::factory()->forUser($author)->forCertification($certification)->create();
+
+        CertificationCoachAssignment::create([
+            'certification_id' => $certification->id,
+            'user_id' => $coach->id,
+            'assigned_by_user_id' => $author->id,
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($coach)->post(route('qa-board.replies.store', $thread), [
+            'body' => '回答です。',
+        ]);
+
+        Notification::assertSentTo($author, QaReplyReceivedNotification::class);
+    }
+
+    public function test_does_not_notify_when_author_replies_to_own_thread(): void
+    {
+        Notification::fake();
+
+        $author = User::factory()->student()->inProgress()->create();
+        $thread = QaThread::factory()->forUser($author)->create();
+
+        $this->actingAs($author)->post(route('qa-board.replies.store', $thread), [
+            'body' => '追記です。',
+        ]);
+
+        Notification::assertNothingSent();
     }
 
     public function test_unassigned_coach_cannot_post_reply(): void

@@ -9,9 +9,11 @@ use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Enrollment;
 use App\Models\User;
+use App\Notifications\Chat\ChatMessageReceivedNotification;
 use App\UseCases\Chat\StoreMessageAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
@@ -56,6 +58,24 @@ class StoreMessageActionTest extends TestCase
         $this->assertNotNull($senderMember->fresh()->last_read_at);
 
         Event::assertDispatched(ChatMessageSent::class);
+    }
+
+    public function test_notifies_other_members_but_not_sender(): void
+    {
+        Notification::fake();
+
+        $sender = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+        $enrollment = Enrollment::factory()->for($sender)->create();
+        $room = ChatRoom::factory()->for($enrollment)->create();
+
+        ChatMember::factory()->create(['chat_room_id' => $room->id, 'user_id' => $sender->id]);
+        ChatMember::factory()->create(['chat_room_id' => $room->id, 'user_id' => $coach->id]);
+
+        app(StoreMessageAction::class)($sender, $room, ['body' => 'こんにちは']);
+
+        Notification::assertSentTo($coach, ChatMessageReceivedNotification::class);
+        Notification::assertNotSentTo($sender, ChatMessageReceivedNotification::class);
     }
 
     public function test_signature_is_user_chat_room_array(): void
