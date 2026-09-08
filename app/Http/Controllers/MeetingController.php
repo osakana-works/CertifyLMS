@@ -32,6 +32,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Notifications\Meeting\MeetingCanceledNotification;
+use App\Notifications\Meeting\MeetingReservedNotification;
 
 /**
  * 1on1 面談予約 (Meeting) の HTTP エントリポイント。
@@ -213,7 +215,14 @@ class MeetingController extends Controller
             $transaction = ($consumeAction)($student, $meeting->id);
             $meeting->update(['meeting_quota_transaction_id' => $transaction->id]);
 
-            return $meeting->fresh();
+            $meeting = $meeting->fresh();
+
+            DB::afterCommit(function () use ($meeting): void {
+                $meeting->loadMissing('coach');
+                $meeting->coach->notify(new MeetingReservedNotification($meeting));
+            });
+
+            return $meeting;
         });
 
         return redirect()
@@ -248,6 +257,13 @@ class MeetingController extends Controller
                 'canceled_by_user_id' => $actor->id,
                 'canceled_at' => now(),
             ]);
+
+            DB::afterCommit(function () use ($locked, $actor): void {
+                $locked->loadMissing(['student', 'coach']);
+                $recipient = $actor->id === $locked->student_id ? $locked->coach : $locked->student;
+
+                $recipient->notify(new MeetingCanceledNotification($locked, $actor->name));
+            });
         });
 
         return redirect()

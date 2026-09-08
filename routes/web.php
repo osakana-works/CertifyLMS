@@ -46,6 +46,7 @@ use App\Http\Controllers\WeakDrillResultController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EnrollmentGoalController;
 use App\Http\Controllers\QaThreadController;
+use App\Http\Controllers\NotificationController;
 
 
 Route::get('/', function () {
@@ -78,6 +79,12 @@ Route::middleware('auth')->group(function () {
     Route::get('enrollments/{enrollment}', [EnrollmentController::class, 'show'])
         ->withTrashed()
         ->name('enrollments.show');
+
+    // 通知(全ロール共通。プラン機能ガードの対象外につき active-learning は付けない)
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 });
 
 // ============================================================
