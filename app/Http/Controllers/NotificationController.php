@@ -9,6 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\View\View;
 
+/**
+ * 通知一覧・既読化の Controller。student / coach / admin 共通(全ロール利用可能)。
+ *
+ * 通知の実体は Laravel 標準の Notifiable 機構(`notifications` テーブル)。
+ * 認可は「本人宛の通知か」を都度チェックし、他人の通知は 403 で弾く。
+ *
+ * - index: タブ(全件 / 未読のみ)+ ページネーション
+ * - markAsRead: 既読化 + data.action_url があればそこへ、無ければ notifications.show へ redirect
+ * - markAllAsRead: 自分宛の未読を一括既読化
+ * - show: action_url を持たない自己完結型通知の全文表示(閲覧時に既読化)
+ */
 class NotificationController extends Controller
 {
     public function index(Request $request): View
@@ -30,7 +41,7 @@ class NotificationController extends Controller
 
     public function show(Request $request, DatabaseNotification $notification): View
     {
-        $this->authorizeOwnNotification($request, $notification);
+        $this->authorize('view', $notification);
 
         if ($notification->read_at === null) {
             $notification->markAsRead();
@@ -41,7 +52,7 @@ class NotificationController extends Controller
 
     public function markAsRead(Request $request, DatabaseNotification $notification): RedirectResponse
     {
-        $this->authorizeOwnNotification($request, $notification);
+        $this->authorize('view', $notification);
 
         $notification->markAsRead();
 
@@ -58,15 +69,5 @@ class NotificationController extends Controller
         $request->user()->unreadNotifications->markAsRead();
 
         return redirect()->route('notifications.index')->with('success', '全ての通知を既読にしました。');
-    }
-
-    private function authorizeOwnNotification(Request $request, DatabaseNotification $notification): void
-    {
-        $user = $request->user();
-
-        abort_unless(
-            $notification->notifiable_type === $user::class && $notification->notifiable_id === $user->id,
-            403,
-        );
     }
 }
